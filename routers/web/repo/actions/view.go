@@ -812,13 +812,8 @@ func Run(ctx *context_module.Context) {
 		return
 	}
 
-	// get workflow entry from default branch commit
-	defaultBranchCommit, err := ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.Repository.DefaultBranch)
-	if err != nil {
-		ctx.Error(http.StatusInternalServerError, err.Error())
-		return
-	}
-	entries, err := actions.ListWorkflows(defaultBranchCommit)
+	// get workflow entry from runTargetCommit
+	entries, err := actions.ListWorkflows(runTargetCommit)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, err.Error())
 		return
@@ -927,4 +922,8 @@ func Run(ctx *context_module.Context) {
 
 	ctx.Flash.Success(ctx.Tr("actions.workflow.run_success", workflowID))
 	ctx.Redirect(redirectURL)
+}
+
+func DispatchInputs(ctx *context_module.Context) {
+	renderListAndWorkflowDispatchTemplate(ctx, tplDispatchInputsActions, true)
 }

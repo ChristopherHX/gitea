@@ -32,8 +32,9 @@ import (
 )
 
 const (
-	tplListActions templates.TplName = "repo/actions/list"
-	tplViewActions templates.TplName = "repo/actions/view"
+	tplListActions           templates.TplName = "repo/actions/list"
+	tplDispatchInputsActions templates.TplName = "repo/actions/workflow_dispatch_inputs"
+	tplViewActions           templates.TplName = "repo/actions/view"
 )
 
 type Workflow struct {
@@ -62,6 +63,10 @@ func MustEnableActions(ctx *context.Context) {
 }
 
 func List(ctx *context.Context) {
+	renderListAndWorkflowDispatchTemplate(ctx, tplListActions, false)
+}
+
+func renderListAndWorkflowDispatchTemplate(ctx *context.Context, tplName templates.TplName, useRef bool) {
 	ctx.Data["Title"] = ctx.Tr("actions.actions")
 	ctx.Data["PageIsActions"] = true
 	workflowID := ctx.FormString("workflow")
@@ -75,10 +80,34 @@ func List(ctx *context.Context) {
 		ctx.ServerError("IsEmpty", err)
 		return
 	} else if !empty {
-		commit, err := ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.Repository.DefaultBranch)
-		if err != nil {
-			ctx.ServerError("GetBranchCommit", err)
-			return
+		var commit *git.Commit
+		if useRef {
+			ref := ctx.FormString("ref")
+			if len(ref) == 0 {
+				ctx.ServerError("ref", nil)
+				return
+			}
+			// get target commit of run from specified ref
+			refName := git.RefName(ref)
+			var err error
+			if refName.IsTag() {
+				commit, err = ctx.Repo.GitRepo.GetTagCommit(refName.TagName())
+			} else if refName.IsBranch() {
+				commit, err = ctx.Repo.GitRepo.GetBranchCommit(refName.BranchName())
+			} else {
+				ctx.ServerError("git_ref_name_error", nil)
+				return
+			}
+			if err != nil {
+				ctx.ServerError("target_ref_not_exist", err)
+				return
+			}
+		} else {
+			commit, err = ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.Repository.DefaultBranch)
+			if err != nil {
+				ctx.ServerError("GetBranchCommit", err)
+				return
+			}
 		}
 		entries, err := actions.ListWorkflows(commit)
 		if err != nil {
@@ -265,7 +294,7 @@ func List(ctx *context.Context) {
 	ctx.Data["Page"] = pager
 	ctx.Data["HasWorkflowsOrRuns"] = len(workflows) > 0 || len(runs) > 0
 
-	ctx.HTML(http.StatusOK, tplListActions)
+	ctx.HTML(http.StatusOK, tplName)
 }
 
 // loadIsRefDeleted loads the IsRefDeleted field for each run in the list.

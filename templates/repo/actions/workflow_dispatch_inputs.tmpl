@@ -1,7 +1,14 @@
+{{range .workflows}}
+	{{if and .ErrMsg (eq .Entry.Name $.CurWorkflow)}}
+		<span data-tooltip-content="{{.ErrMsg}}">
+			{{svg "octicon-alert" 16 "text red"}}
+		</span>
+	{{end}}
+{{end}}
 {{range $item := .WorkflowDispatchConfig.Inputs}}
 <div class="ui field {{if .Required}}required{{end}}">
 	{{if eq .Type "choice"}}
-		<label>{{.Description}}:</label>
+		<label>{{Iif .Description .Description .Name}}:</label>
 		<select class="ui selection type dropdown" name="{{.Name}}">
 			{{range .Options}}
 			<option value="{{.}}" {{if eq $item.Default .}}selected{{end}} >{{.}}</option>
@@ -9,14 +16,14 @@
 		</select>
 	{{else if eq .Type "boolean"}}
 		<div class="ui inline checkbox">
-			<label>{{.Description}}</label>
+			<label>{{Iif .Description .Description .Name}}</label>
 			<input type="checkbox" name="{{.Name}}" {{if eq .Default "true"}}checked{{end}}>
 		</div>
 	{{else if eq .Type "number"}}
-		<label>{{.Description}}:</label>
+		<label>{{Iif .Description .Description .Name}}:</label>
 		<input name="{{.Name}}" value="{{.Default}}" {{if .Required}}required{{end}}>
 	{{else}}
-		<label>{{.Description}}:</label>
+		<label>{{Iif .Description .Description .Name}}:</label>
 		<input name="{{.Name}}" value="{{.Default}}" {{if .Required}}required{{end}}>
 	{{end}}
 </div>

@@ -923,7 +923,3 @@ func Run(ctx *context_module.Context) {
 	ctx.Flash.Success(ctx.Tr("actions.workflow.run_success", workflowID))
 	ctx.Redirect(redirectURL)
 }
-
-func DispatchInputs(ctx *context_module.Context) {
-	renderListAndWorkflowDispatchTemplate(ctx, tplDispatchInputsActions, true)
-}

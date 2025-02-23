@@ -96,3 +96,13 @@ type ActionArtifactsResponse struct {
 	Entries    []*ActionArtifact `json:"artifacts"`
 	TotalCount int64             `json:"total_count"`
 }
+
+// ActionWorkflowRun represents a WorkflowJob
+type ActionWorkflowJob struct {
+	ID         int64    `json:"id"`
+	RunID      int64    `json:"run_id"`
+	RunURL     string   `json:"run_url"`
+	Name       string   `json:"name"`
+	Labels     []string `json:"labels"`
+	RunAttempt int64    `json:"run_attempt"`
+}

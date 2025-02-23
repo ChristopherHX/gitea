@@ -6,6 +6,7 @@ package webhook
 import (
 	"context"
 
+	actions_model "code.gitea.io/gitea/models/actions"
 	git_model "code.gitea.io/gitea/models/git"
 	issues_model "code.gitea.io/gitea/models/issues"
 	"code.gitea.io/gitea/models/organization"
@@ -936,6 +937,50 @@ func notifyPackage(ctx context.Context, sender *user_model.User, pd *packages_mo
 		Action:       action,
 		Package:      apiPackage,
 		Organization: org,
+		Sender:       convert.ToUser(ctx, sender, nil),
+	}); err != nil {
+		log.Error("PrepareWebhooks: %v", err)
+	}
+}
+
+func (*webhookNotifier) CreateWorkflowJob(ctx context.Context, repo *repo_model.Repository, sender *user_model.User, job *actions_model.ActionRunJob) {
+	source := EventSource{
+		Repository: repo,
+		Owner:      repo.Owner,
+	}
+
+	var org *api.Organization
+	if repo.Owner.IsOrganization() {
+		org = convert.ToOrganization(ctx, organization.OrgFromUser(repo.Owner))
+	}
+
+	job.LoadAttributes(ctx)
+
+	action := "unknown"
+	switch job.Status {
+	// This is a naming conflict of the webhook between Gitea and GitHub Actions
+	case actions_model.StatusWaiting:
+		action = "queued"
+	case actions_model.StatusBlocked:
+		action = "waiting"
+	case actions_model.StatusRunning:
+		action = "in_progress"
+	case actions_model.StatusSuccess, actions_model.StatusCancelled, actions_model.StatusFailure:
+		action = "completed"
+	}
+
+	if err := PrepareWebhooks(ctx, source, webhook_module.HookEventWorkflowRun, &api.WorkflowJobPayload{
+		Action: action,
+		WorkflowJob: &api.ActionWorkflowJob{
+			ID:         job.ID,
+			RunID:      job.RunID,
+			RunURL:     job.Run.HTMLURL(),
+			Name:       job.Name,
+			Labels:     job.RunsOn,
+			RunAttempt: job.Attempt,
+		},
+		Organization: org,
+		Repository:   convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}),
 		Sender:       convert.ToUser(ctx, sender, nil),
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)

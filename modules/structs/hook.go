@@ -473,7 +473,7 @@ func (p *CommitStatusPayload) JSONPayload() ([]byte, error) {
 // WorkflowJobPayload represents a payload information of workflow job event.
 type WorkflowJobPayload struct {
 	Action       string             `json:"action"`
-	WorkflowJob  *ActionWorkflowJob `json:"workflow_run"`
+	WorkflowJob  *ActionWorkflowJob `json:"workflow_job"`
 	PullRequest  *PullRequest       `json:"pull_request,omitempty"`
 	Organization *Organization      `json:"organization,omitempty"`
 	Repository   *Repository        `json:"repository"`

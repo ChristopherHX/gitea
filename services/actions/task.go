@@ -12,13 +12,15 @@ import (
 	secret_model "code.gitea.io/gitea/models/secret"
 
 	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
+	notifier "code.gitea.io/gitea/services/notify"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func PickTask(ctx context.Context, runner *actions_model.ActionRunner) (*runnerv1.Task, bool, error) {
 	var (
-		task *runnerv1.Task
-		job  *actions_model.ActionRunJob
+		task       *runnerv1.Task
+		job        *actions_model.ActionRunJob
+		actionTask *actions_model.ActionTask
 	)
 
 	if runner.Ephemeral {
@@ -50,6 +52,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner) (*runnerv
 			return fmt.Errorf("task LoadAttributes: %w", err)
 		}
 		job = t.Job
+		actionTask = t
 
 		secrets, err := secret_model.GetSecretsOfTask(ctx, t)
 		if err != nil {
@@ -90,6 +93,7 @@ func PickTask(ctx context.Context, runner *actions_model.ActionRunner) (*runnerv
 	}
 
 	CreateCommitStatus(ctx, job)
+	notifier.CreateWorkflowJob(ctx, job.Run.Repo, job.Run.TriggerUser, job, actionTask)
 
 	return task, true, nil
 }

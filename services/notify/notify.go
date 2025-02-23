@@ -6,7 +6,7 @@ package notify
 import (
 	"context"
 
-actions_model "code.gitea.io/gitea/models/actions"
+	actions_model "code.gitea.io/gitea/models/actions"
 	git_model "code.gitea.io/gitea/models/git"
 	issues_model "code.gitea.io/gitea/models/issues"
 	packages_model "code.gitea.io/gitea/models/packages"
@@ -376,8 +376,8 @@ func CreateCommitStatus(ctx context.Context, repo *repo_model.Repository, commit
 	}
 }
 
-func CreateWorkflowJob(ctx context.Context, repo *repo_model.Repository, sender *user_model.User, job *actions_model.ActionRunJob) {
+func CreateWorkflowJob(ctx context.Context, repo *repo_model.Repository, sender *user_model.User, job *actions_model.ActionRunJob, task *actions_model.ActionTask) {
 	for _, notifier := range notifiers {
-		notifier.CreateWorkflowJob(ctx, repo, sender, job)
+		notifier.CreateWorkflowJob(ctx, repo, sender, job, task)
 	}
 }

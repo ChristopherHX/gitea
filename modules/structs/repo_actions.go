@@ -105,4 +105,6 @@ type ActionWorkflowJob struct {
 	Name       string   `json:"name"`
 	Labels     []string `json:"labels"`
 	RunAttempt int64    `json:"run_attempt"`
+	HeadSha    string   `json:"head_sha"`
+	HeadBranch string   `json:"head_branch"`
 }

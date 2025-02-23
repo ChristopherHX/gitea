@@ -978,6 +978,8 @@ func (*webhookNotifier) CreateWorkflowJob(ctx context.Context, repo *repo_model.
 			Name:       job.Name,
 			Labels:     job.RunsOn,
 			RunAttempt: job.Attempt,
+			HeadSha:    job.Run.CommitSHA,
+			HeadBranch: git.RefName(job.Run.Ref).BranchName(),
 		},
 		Organization: org,
 		Repository:   convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeOwner}),

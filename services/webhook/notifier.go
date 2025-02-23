@@ -969,7 +969,7 @@ func (*webhookNotifier) CreateWorkflowJob(ctx context.Context, repo *repo_model.
 		action = "completed"
 	}
 
-	if err := PrepareWebhooks(ctx, source, webhook_module.HookEventWorkflowRun, &api.WorkflowJobPayload{
+	if err := PrepareWebhooks(ctx, source, webhook_module.HookEventWorkflowJob, &api.WorkflowJobPayload{
 		Action: action,
 		WorkflowJob: &api.ActionWorkflowJob{
 			ID:         job.ID,

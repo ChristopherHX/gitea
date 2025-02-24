@@ -960,17 +960,22 @@ func (*webhookNotifier) CreateWorkflowJob(ctx context.Context, repo *repo_model.
 		return
 	}
 
-	action, conclusion := toActionStatus(job.Status)
+	status, conclusion := toActionStatus(job.Status)
 	var runnerID int64
+	var runnerName string
 	var steps []*api.ActionWorkflowStep
 
 	if task != nil {
 		runnerID = task.RunnerID
+		if runner, ok, _ := db.GetByID[actions_model.ActionRunner](ctx, runnerID); ok {
+			runnerName = runner.Name
+		}
 		for i, step := range task.Steps {
-			_, stepConclusion := toActionStatus(job.Status)
+			stepStatus, stepConclusion := toActionStatus(job.Status)
 			steps = append(steps, &api.ActionWorkflowStep{
 				Name:        step.Name,
 				Number:      int64(i),
+				Status:      stepStatus,
 				Conclusion:  stepConclusion,
 				StartedAt:   step.Started.AsTime().UTC(),
 				CompletedAt: step.Stopped.AsTime().UTC(),
@@ -979,7 +984,7 @@ func (*webhookNotifier) CreateWorkflowJob(ctx context.Context, repo *repo_model.
 	}
 
 	if err := PrepareWebhooks(ctx, source, webhook_module.HookEventWorkflowJob, &api.WorkflowJobPayload{
-		Action: action,
+		Action: status,
 		WorkflowJob: &api.ActionWorkflowJob{
 			ID:          job.ID,
 			RunID:       job.RunID,
@@ -989,8 +994,10 @@ func (*webhookNotifier) CreateWorkflowJob(ctx context.Context, repo *repo_model.
 			RunAttempt:  job.Attempt,
 			HeadSha:     job.Run.CommitSHA,
 			HeadBranch:  git.RefName(job.Run.Ref).BranchName(),
+			Status:      status,
 			Conclusion:  conclusion,
 			RunnerID:    runnerID,
+			RunnerName:  runnerName,
 			Steps:       steps,
 			CreatedAt:   job.Created.AsTime().UTC(),
 			StartedAt:   job.Started.AsTime().UTC(),

@@ -38,6 +38,10 @@ func StopEndlessTasks(ctx context.Context) error {
 func notifyWorkflowJobStatusUpdate(ctx context.Context, jobs []*actions_model.ActionRunJob) {
 	if len(jobs) > 0 {
 		CreateCommitStatus(ctx, jobs...)
+		for _, job := range jobs {
+			_ = job.LoadAttributes(ctx)
+			notifier.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+		}
 	}
 }
 

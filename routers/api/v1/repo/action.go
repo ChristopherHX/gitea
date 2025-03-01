@@ -645,6 +645,64 @@ func (Action) DeleteRunner(ctx *context.APIContext) {
 	shared.DeleteRunner(ctx, 0, ctx.Repo.Repository.ID, ctx.PathParamInt64("runner_id"))
 }
 
+// GetRunnerDownloads returns the token to register repo runners
+func (Action) GetRunnerDownloads(ctx *context.APIContext) {
+	// swagger:operation GET /repos/{owner}/{repo}/actions/runners/downloads repository repoGetRunnerRegistrationToken
+	// ---
+	// summary: Get a repository's actions runner registration token
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repo
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repo
+	//   type: string
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/RegistrationToken"
+
+	ctx.Resp.Header().Set("Content-Type", "application/json")
+	ctx.Status(http.StatusOK)
+	ctx.Resp.Write([]byte(`[
+  {
+    "os": "osx",
+    "architecture": "x64",
+    "download_url": "https://github.com/actions/runner/releases/download/v2.164.0/actions-runner-osx-x64-2.164.0.tar.gz",
+    "filename": "actions-runner-osx-x64-2.164.0.tar.gz"
+  },
+  {
+    "os": "linux",
+    "architecture": "x64",
+    "download_url": "https://github.com/actions/runner/releases/download/v2.164.0/actions-runner-linux-x64-2.164.0.tar.gz",
+    "filename": "actions-runner-linux-x64-2.164.0.tar.gz"
+  },
+  {
+    "os": "linux",
+    "architecture": "arm",
+    "download_url": "https://github.com/actions/runner/releases/download/v2.164.0/actions-runner-linux-arm-2.164.0.tar.gz",
+    "filename": "actions-runner-linux-arm-2.164.0.tar.gz"
+  },
+  {
+    "os": "win",
+    "architecture": "x64",
+    "download_url": "https://github.com/actions/runner/releases/download/v2.164.0/actions-runner-win-x64-2.164.0.zip",
+    "filename": "actions-runner-win-x64-2.164.0.zip"
+  },
+  {
+    "os": "linux",
+    "architecture": "arm64",
+    "download_url": "https://github.com/actions/runner/releases/download/v2.164.0/actions-runner-linux-arm64-2.164.0.tar.gz",
+    "filename": "actions-runner-linux-arm64-2.164.0.tar.gz"
+  }
+]`))
+}
+
 var _ actions_service.API = new(Action)
 
 // Action implements actions_service.API

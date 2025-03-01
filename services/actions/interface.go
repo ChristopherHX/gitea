@@ -33,4 +33,6 @@ type API interface {
 	GetRunner(*context.APIContext)
 	// DeleteRunner delete runner
 	DeleteRunner(*context.APIContext)
+	// GetRunnerDownloads get runner downloads
+	GetRunnerDownloads(*context.APIContext)
 }

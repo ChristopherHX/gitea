@@ -913,6 +913,8 @@ func Routes() *web.Router {
 
 			m.Group("/runners", func() {
 				m.Get("/registration-token", reqToken(), reqChecker, act.GetRegistrationToken)
+				m.Post("/registration-token", reqToken(), reqChecker, act.GetRegistrationToken)
+				m.Get("/downloads", reqToken(), reqChecker, act.GetRunnerDownloads)
 			})
 		})
 	}
@@ -1044,6 +1046,7 @@ func Routes() *web.Router {
 
 				m.Group("/runners", func() {
 					m.Get("/registration-token", reqToken(), user.GetRegistrationToken)
+					m.Post("/registration-token", reqToken(), user.GetRegistrationToken)
 				})
 			})
 
@@ -1682,6 +1685,7 @@ func Routes() *web.Router {
 			})
 			m.Group("/runners", func() {
 				m.Get("/registration-token", admin.GetRegistrationToken)
+				m.Post("/registration-token", reqToken(), admin.GetRegistrationToken)
 			})
 		}, tokenRequiresScopes(auth_model.AccessTokenScopeCategoryAdmin), reqToken(), reqSiteAdmin())
 

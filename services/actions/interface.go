@@ -25,4 +25,6 @@ type API interface {
 	UpdateVariable(*context.APIContext)
 	// GetRegistrationToken get registration token
 	GetRegistrationToken(*context.APIContext)
+	// GetRunnerDownloads get runner downloads
+	GetRunnerDownloads(*context.APIContext)
 }

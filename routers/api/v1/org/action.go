@@ -536,6 +536,18 @@ func (Action) GetRunnerDownloads(ctx *context.APIContext) {
 ]`))
 }
 
+func (Action) GetRunners(ctx *context.APIContext) {
+	shared.GetRunners(ctx, ctx.Org.Organization.ID, 0)
+}
+
+func (Action) GetRunner(ctx *context.APIContext) {
+	shared.GetRunner(ctx, ctx.Org.Organization.ID, 0, ctx.PathParamInt64("runner_id"))
+}
+
+func (Action) DeleteRunner(ctx *context.APIContext) {
+	shared.DeleteRunner(ctx, ctx.Org.Organization.ID, 0, ctx.PathParamInt64("runner_id"))
+}
+
 var _ actions_service.API = new(Action)
 
 // Action implements actions_service.API

@@ -27,4 +27,7 @@ type API interface {
 	GetRegistrationToken(*context.APIContext)
 	// GetRunnerDownloads get runner downloads
 	GetRunnerDownloads(*context.APIContext)
+	GetRunners(*context.APIContext)
+	GetRunner(*context.APIContext)
+	DeleteRunner(*context.APIContext)
 }

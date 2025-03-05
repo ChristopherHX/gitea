@@ -16,7 +16,7 @@ import (
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/timeutil"
 	webhook_module "code.gitea.io/gitea/modules/webhook"
-	notifier "code.gitea.io/gitea/services/notify"
+	notify_service "code.gitea.io/gitea/services/notify"
 )
 
 // StopZombieTasks stops the task which have running status, but haven't been updated for a long time
@@ -40,12 +40,12 @@ func notifyWorkflowJobStatusUpdate(ctx context.Context, jobs []*actions_model.Ac
 		CreateCommitStatus(ctx, jobs...)
 		for _, job := range jobs {
 			_ = job.LoadAttributes(ctx)
-			notifier.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+			notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
 		}
 	}
 }
 
-func CancelPreviousJobs(ctx context.Context, repoID int64, ref string, workflowID string, event webhook_module.HookEventType) error {
+func CancelPreviousJobs(ctx context.Context, repoID int64, ref, workflowID string, event webhook_module.HookEventType) error {
 	jobs, err := actions_model.CancelPreviousJobs(ctx, repoID, ref, workflowID, event)
 	notifyWorkflowJobStatusUpdate(ctx, jobs)
 	return err
@@ -123,7 +123,7 @@ func CancelAbandonedJobs(ctx context.Context) error {
 		CreateCommitStatus(ctx, job)
 		if updated {
 			_ = job.LoadAttributes(ctx)
-			notifier.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
+			notify_service.WorkflowJobStatusUpdate(ctx, job.Run.Repo, job.Run.TriggerUser, job, nil)
 		}
 	}
 

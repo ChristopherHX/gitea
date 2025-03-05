@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net/http"
 
-	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
 	actions_model "code.gitea.io/gitea/models/actions"
 	"code.gitea.io/gitea/models/db"
 	api "code.gitea.io/gitea/modules/structs"
@@ -15,6 +14,8 @@ import (
 	"code.gitea.io/gitea/routers/api/v1/utils"
 	"code.gitea.io/gitea/services/context"
 	"code.gitea.io/gitea/services/convert"
+
+	runnerv1 "code.gitea.io/actions-proto-go/runner/v1"
 )
 
 // RegistrationToken is response related to registration token

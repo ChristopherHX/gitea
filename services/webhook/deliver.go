@@ -20,7 +20,6 @@ import (
 
 	user_model "code.gitea.io/gitea/models/user"
 	webhook_model "code.gitea.io/gitea/models/webhook"
-
 	"code.gitea.io/gitea/modules/graceful"
 	"code.gitea.io/gitea/modules/hostmatcher"
 	"code.gitea.io/gitea/modules/log"

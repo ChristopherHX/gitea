@@ -543,6 +543,26 @@ func handleSchedules(
 			log.Warn("no schedule event")
 			continue
 		}
+		// Trigger and Send Mails for Author, who last modified this workflow
+		lastChangedBy, _ := git.GetLastCommitForPaths(ctx, commit, dwf.Tree, []string{dwf.EntryName})
+		var triggerUser *user_model.User
+		if entry, ok := lastChangedBy[dwf.EntryName]; ok && entry != nil {
+			if entry.Committer != nil && entry.Committer.Email != setting.Repository.Signing.SigningEmail {
+				triggerUser, err = user_model.GetUserByEmail(ctx, entry.Committer.Email)
+				if err != nil {
+					log.Error("unknown schedule committer")
+				}
+			}
+			if entry.Author != nil && triggerUser == nil {
+				triggerUser, err = user_model.GetUserByEmail(ctx, entry.Author.Email)
+				if err != nil {
+					log.Error("unknown schedule author")
+				}
+			}
+		}
+		if triggerUser == nil {
+			triggerUser = user_model.NewActionsUser()
+		}
 
 		run := &actions_model.ActionSchedule{
 			Title:         strings.SplitN(commit.CommitMessage, "\n", 2)[0],
@@ -550,8 +570,8 @@ func handleSchedules(
 			Repo:          input.Repo,
 			OwnerID:       input.Repo.OwnerID,
 			WorkflowID:    dwf.EntryName,
-			TriggerUserID: user_model.ActionsUserID,
-			TriggerUser:   user_model.NewActionsUser(),
+			TriggerUserID: triggerUser.ID,
+			TriggerUser:   triggerUser,
 			Ref:           ref,
 			CommitSHA:     commit.ID.String(),
 			Event:         input.Event,

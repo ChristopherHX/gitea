@@ -25,6 +25,7 @@ type DetectedWorkflow struct {
 	EntryName    string
 	TriggerEvent *jobparser.Event
 	Content      []byte
+	Tree         string
 }
 
 func init() {
@@ -105,7 +106,7 @@ func DetectWorkflows(
 	payload api.Payloader,
 	detectSchedule bool,
 ) ([]*DetectedWorkflow, []*DetectedWorkflow, error) {
-	_, entries, err := ListWorkflows(commit)
+	rpath, entries, err := ListWorkflows(commit)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -132,6 +133,7 @@ func DetectWorkflows(
 						EntryName:    entry.Name(),
 						TriggerEvent: evt,
 						Content:      content,
+						Tree:         rpath,
 					}
 					schedules = append(schedules, dwf)
 				}
@@ -140,6 +142,7 @@ func DetectWorkflows(
 					EntryName:    entry.Name(),
 					TriggerEvent: evt,
 					Content:      content,
+					Tree:         rpath,
 				}
 				workflows = append(workflows, dwf)
 			}
@@ -150,7 +153,7 @@ func DetectWorkflows(
 }
 
 func DetectScheduledWorkflows(gitRepo *git.Repository, commit *git.Commit) ([]*DetectedWorkflow, error) {
-	_, entries, err := ListWorkflows(commit)
+	rpath, entries, err := ListWorkflows(commit)
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +178,7 @@ func DetectScheduledWorkflows(gitRepo *git.Repository, commit *git.Commit) ([]*D
 					EntryName:    entry.Name(),
 					TriggerEvent: evt,
 					Content:      content,
+					Tree:         rpath,
 				}
 				wfs = append(wfs, dwf)
 			}

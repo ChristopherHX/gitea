@@ -29,6 +29,11 @@ func testActionsJobTokenAccess(u *url.URL, isFork bool) func(t *testing.T) {
 		task.Status = actions_model.StatusRunning
 		task.IsForkPullRequest = isFork
 		err := actions_model.UpdateTask(t.Context(), task, "token_hash", "token_salt", "token_last_eight", "status", "is_fork_pull_request")
+		task.LoadJob(t.Context())
+		require.NoError(t, err)
+		job := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{ID: 192})
+		job.WorkflowPayload = []byte("name: Push\n\"on\": push\njobs:\n    wf2-job:\n        name: wf2-job\n        runs-on: ubuntu-latest\n        steps:\n            - run: echo 'cmd 1'\n            - run: echo 'cmd 2'\n        permissions:\n            contents: write\n")
+		_, err = actions_model.UpdateRunJob(t.Context(), job, nil, "workflow_payload")
 		require.NoError(t, err)
 		session := emptyTestSession(t)
 		context := APITestContext{

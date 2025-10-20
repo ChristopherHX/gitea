@@ -254,6 +254,46 @@ func finalProcessRepoUnitPermission(user *user_model.User, perm *Permission) {
 	}
 }
 
+func actionUnitToType(perm string) unit.Type {
+	switch perm {
+	case "external_wiki":
+		return unit.TypeExternalWiki
+	case "external_tracker":
+		return unit.TypeExternalTracker
+	case "pull_requests":
+		return unit.TypePullRequests
+	case "issues":
+		return unit.TypeIssues
+	case "actions":
+		return unit.TypeActions
+	case "projects":
+		return unit.TypeProjects
+	case "contents":
+		return unit.TypeCode
+	case "releases":
+		return unit.TypeReleases
+	case "packages":
+		return unit.TypePackages
+	case "wiki":
+		return unit.TypeWiki
+	default:
+		return unit.TypeInvalid
+	}
+}
+
+func actionUnitLevel(level string) perm_model.AccessMode {
+	switch level {
+	case "read":
+		return perm_model.AccessModeRead
+	case "write":
+		return perm_model.AccessModeWrite
+	case "none":
+		return perm_model.AccessModeNone
+	default:
+		return perm_model.AccessModeNone
+	}
+}
+
 // GetActionsUserRepoPermission returns the actions user permissions to the repository
 func GetActionsUserRepoPermission(ctx context.Context, repo *repo_model.Repository, actionsUser *user_model.User, taskID int64) (perm Permission, err error) {
 	if actionsUser.ID != user_model.ActionsUserID {
@@ -275,9 +315,45 @@ func GetActionsUserRepoPermission(ctx context.Context, repo *repo_model.Reposito
 		accessMode = perm_model.AccessModeWrite
 	}
 
+	if err := task.LoadJob(ctx); err != nil {
+		return perm, err
+	}
+
+	job, err := task.Job.ParseJob()
+	if err != nil {
+		return perm, err
+	}
+
 	if err := repo.LoadUnits(ctx); err != nil {
 		return perm, err
 	}
+	var short string
+	var permMap map[string]string
+	if job.RawPermissions.Decode(&short) == nil {
+		if short == "read-all" && accessMode > perm_model.AccessModeRead {
+			accessMode = perm_model.AccessModeRead
+		} else if short == "write-all" && accessMode > perm_model.AccessModeWrite {
+			accessMode = perm_model.AccessModeWrite
+		} else if short == "none" {
+			accessMode = perm_model.AccessModeNone
+		}
+	} else if job.RawPermissions.Decode(&permMap) == nil {
+		perm.SetUnitsWithDefaultAccessMode(repo.Units, perm_model.AccessModeNone)
+		for permStr, levelStr := range permMap {
+			unit, err := repo.GetUnit(ctx, actionUnitToType(permStr))
+			if err != nil {
+				return perm, err
+			}
+			level := actionUnitLevel(levelStr)
+			// Important for task.IsForkPullRequest no permission escalation
+			if level > perm_model.AccessModeRead && task.IsForkPullRequest {
+				level = perm_model.AccessModeRead
+			}
+			perm.SetUnitsWithDefaultAccessMode([]*repo_model.RepoUnit{unit}, level)
+		}
+		return perm, nil
+	}
+
 	perm.SetUnitsWithDefaultAccessMode(repo.Units, accessMode)
 	return perm, nil
 }

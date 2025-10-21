@@ -319,13 +319,19 @@ func GetActionsUserRepoPermission(ctx context.Context, repo *repo_model.Reposito
 		return perm, err
 	}
 
-	job, err := task.Job.ParseJob()
+	workflow, err := task.Job.ParseWorkflow()
 	if err != nil {
 		return perm, err
 	}
+	_, job := workflow.Job()
 
 	if err := repo.LoadUnits(ctx); err != nil {
 		return perm, err
+	}
+	rawPermissions := job.RawPermissions
+	// Fallback to workflow level
+	if rawPermissions.IsZero() {
+		rawPermissions = workflow.RawPermissions
 	}
 	var short string
 	var permMap map[string]string

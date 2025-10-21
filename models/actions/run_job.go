@@ -100,8 +100,8 @@ func (job *ActionRunJob) LoadAttributes(ctx context.Context) error {
 	return job.Run.LoadAttributes(ctx)
 }
 
-// ParseJob parses the job structure from the ActionRunJob.WorkflowPayload
-func (job *ActionRunJob) ParseJob() (*jobparser.Job, error) {
+// ParseWorkflow parses the workflow structure from the ActionRunJob.WorkflowPayload
+func (job *ActionRunJob) ParseWorkflow() (*jobparser.SingleWorkflow, error) {
 	// job.WorkflowPayload is a SingleWorkflow created from an ActionRun's workflow, which exactly contains this job's YAML definition.
 	// Ideally it shouldn't be called "Workflow", it is just a job with global workflow fields + trigger
 	parsedWorkflows, err := jobparser.Parse(job.WorkflowPayload)
@@ -110,7 +110,16 @@ func (job *ActionRunJob) ParseJob() (*jobparser.Job, error) {
 	} else if len(parsedWorkflows) != 1 {
 		return nil, fmt.Errorf("job %d single workflow: not single workflow", job.ID)
 	}
-	_, workflowJob := parsedWorkflows[0].Job()
+	return parsedWorkflows[0], nil
+}
+
+// ParseJob parses the job structure from the ActionRunJob.WorkflowPayload
+func (job *ActionRunJob) ParseJob() (*jobparser.Job, error) {
+	parsedWorkflow, err := job.ParseWorkflow()
+	if err != nil {
+		return nil, err
+	}
+	_, workflowJob := parsedWorkflow.Job()
 	if workflowJob == nil {
 		// it shouldn't happen, and since the callers don't check nil, so return an error instead of nil
 		return nil, util.ErrorWrap(util.ErrNotExist, "job %d single workflow: payload doesn't contain a job", job.ID)

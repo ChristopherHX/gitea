@@ -5,6 +5,7 @@ package access
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -297,7 +298,7 @@ func actionUnitLevel(level string) perm_model.AccessMode {
 // GetActionsUserRepoPermission returns the actions user permissions to the repository
 func GetActionsUserRepoPermission(ctx context.Context, repo *repo_model.Repository, actionsUser *user_model.User, taskID int64) (perm Permission, err error) {
 	if actionsUser.ID != user_model.ActionsUserID {
-		return perm, fmt.Errorf("api GetActionsUserRepoPermission can only be called by the actions user")
+		return perm, errors.New("api GetActionsUserRepoPermission can only be called by the actions user")
 	}
 	task, err := actions_model.GetTaskByID(ctx, taskID)
 	if err != nil {

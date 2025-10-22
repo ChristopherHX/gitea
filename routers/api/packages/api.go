@@ -8,6 +8,8 @@ import (
 
 	auth_model "code.gitea.io/gitea/models/auth"
 	"code.gitea.io/gitea/models/perm"
+	"code.gitea.io/gitea/models/perm/access"
+	"code.gitea.io/gitea/models/unit"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/web"
@@ -78,6 +80,21 @@ func reqPackageAccess(accessMode perm.AccessMode) func(ctx *context.Context) {
 					}
 				}
 			}
+		}
+
+		if ctx.Data["IsActionsToken"] == true {
+			taskID := ctx.Data["ActionsTaskID"].(int64)
+			perm, err := access.GetActionsUserPackagesPermission(ctx, ctx.Package.Owner, ctx.Doer, taskID)
+			if err != nil {
+				ctx.HTTPError(http.StatusInternalServerError, "GetActionsUserPackagesPermission", err.Error())
+				return
+			}
+			if !perm.CanAccess(accessMode, unit.TypePackages) {
+				ctx.Resp.Header().Set("WWW-Authenticate", `Basic realm="Gitea Package API"`)
+				ctx.HTTPError(http.StatusUnauthorized, "reqPackageAccess", "user should have specific permission or be a site admin")
+				return
+			}
+			return
 		}
 
 		if ctx.Package.AccessMode < accessMode && !ctx.IsUserSiteAdmin() {

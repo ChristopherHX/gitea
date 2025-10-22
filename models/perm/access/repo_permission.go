@@ -295,6 +295,85 @@ func actionUnitLevel(level string) perm_model.AccessMode {
 	}
 }
 
+func GetActionsUserPackagesPermission(ctx context.Context, org *user_model.User, actionsUser *user_model.User, taskID int64) (perm Permission, err error) {
+	if actionsUser.ID != user_model.ActionsUserID {
+		return perm, errors.New("api GetActionsUserRepoPermission can only be called by the actions user")
+	}
+	actionsUser.TaskID = taskID
+	task, err := actions_model.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return perm, err
+	}
+	repo, err := repo_model.GetRepositoryByID(ctx, task.RepoID)
+	if err != nil {
+		return perm, err
+	}
+
+	if repo.OwnerID != org.ID {
+		// FIXME allow public repo read access if tokenless pull is enabled
+		return perm, nil
+	}
+
+	var accessMode perm_model.AccessMode
+	if task.IsForkPullRequest {
+		accessMode = perm_model.AccessModeRead
+	} else {
+		accessMode = perm_model.AccessModeWrite
+	}
+
+	// if err := task.LoadJob(ctx); err != nil {
+	// 	return perm, err
+	// }
+
+	// workflow, err := task.Job.ParseWorkflow()
+	// if err != nil {
+	// 	return perm, err
+	// }
+	// _, job := workflow.Job()
+
+	// if err := repo.LoadUnits(ctx); err != nil {
+	// 	return perm, err
+	// }
+	// rawPermissions := job.RawPermissions
+	// // Fallback to workflow level
+	// if rawPermissions.IsZero() {
+	// 	rawPermissions = workflow.RawPermissions
+	// }
+	// var short string
+	// var permMap map[string]string
+	// if job.RawPermissions.Decode(&short) == nil {
+	// 	if short == "read-all" && accessMode > perm_model.AccessModeRead {
+	// 		accessMode = perm_model.AccessModeRead
+	// 	} else if short == "write-all" && accessMode > perm_model.AccessModeWrite {
+	// 		accessMode = perm_model.AccessModeWrite
+	// 	} else if short == "none" {
+	// 		accessMode = perm_model.AccessModeNone
+	// 	}
+	// } else if job.RawPermissions.Decode(&permMap) == nil {
+	// 	perm.SetUnitsWithDefaultAccessMode(repo.Units, perm_model.AccessModeNone)
+	// 	for permStr, levelStr := range permMap {
+	// 		unit, err := repo.GetUnit(ctx, actionUnitToType(permStr))
+	// 		if err != nil {
+	// 			return perm, err
+	// 		}
+	// 		level := actionUnitLevel(levelStr)
+	// 		// Important for task.IsForkPullRequest no permission escalation
+	// 		if level > perm_model.AccessModeRead && task.IsForkPullRequest {
+	// 			level = perm_model.AccessModeRead
+	// 		}
+	// 		perm.SetUnitsWithDefaultAccessMode([]*repo_model.RepoUnit{unit}, level)
+	// 	}
+	// 	return perm, nil
+	// }
+
+	perm.SetUnitsWithDefaultAccessMode([]*repo_model.RepoUnit{
+		{
+			Type: unit.TypePackages,
+		},
+	}, accessMode)
+	return perm, nil
+}
+
 // GetActionsUserRepoPermission returns the actions user permissions to the repository
 func GetActionsUserRepoPermission(ctx context.Context, repo *repo_model.Repository, actionsUser *user_model.User, taskID int64) (perm Permission, err error) {
 	if actionsUser.ID != user_model.ActionsUserID {

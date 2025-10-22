@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	auth_model "code.gitea.io/gitea/models/auth"
 	git_model "code.gitea.io/gitea/models/git"
@@ -51,6 +52,33 @@ type Claims struct {
 	Op     string
 	UserID int64
 	jwt.RegisteredClaims
+}
+
+type AuthTokenOptions struct {
+	Op     string
+	UserID int64
+	RepoID int64
+}
+
+func GetLFSAuthTokenWithBearer(opts AuthTokenOptions) (string, error) {
+	now := time.Now()
+	claims := Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(setting.LFS.HTTPAuthExpiry)),
+			NotBefore: jwt.NewNumericDate(now),
+		},
+		RepoID: opts.RepoID,
+		Op:     opts.Op,
+		UserID: opts.UserID,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString(setting.LFS.JWTSecretBytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign LFS JWT token: %w", err)
+	}
+	return "Bearer " + tokenString, nil
 }
 
 // DownloadLink builds a URL to download the object.
@@ -518,29 +546,33 @@ func authenticate(ctx *context.Context, repository *repo_model.Repository, autho
 		accessMode = perm_model.AccessModeWrite
 	}
 
-	var perm access_model.Permission
-	var err error
 	if ctx.Data["IsActionsToken"] == true {
 		taskID := ctx.Data["ActionsTaskID"].(int64)
-		perm, err = access_model.GetActionsUserRepoPermission(ctx, repository, ctx.Doer, taskID)
+		perm, err := access_model.GetActionsUserRepoPermission(ctx, repository, ctx.Doer, taskID)
 		if err != nil {
 			log.Error("Unable to GetActionsUserRepoPermission for task[%d] Error: %v", taskID, err)
 			return false
 		}
-	} else {
-		// ctx.IsSigned is unnecessary here, this will be checked in perm.CanAccess
-		perm, err = access_model.GetUserRepoPermission(ctx, repository, ctx.Doer)
-		if err != nil {
-			log.Error("Unable to GetUserRepoPermission for user %-v in repo %-v Error: %v", ctx.Doer, repository, err)
-			return false
-		}
+		return perm.CanAccess(accessMode, unit.TypeCode)
 	}
 
-	canRead := perm.CanAccess(accessMode, unit.TypeCode)
-	if canRead && (!requireSigned || ctx.IsSigned) {
+	// it works for both anonymous request and signed-in user, then perm.CanAccess will do the permission check
+	perm, err := access_model.GetUserRepoPermission(ctx, repository, ctx.Doer)
+	if err != nil {
+		log.Error("Unable to GetUserRepoPermission for user %-v in repo %-v Error: %v", ctx.Doer, repository, err)
+		return false
+	}
+
+	canAccess := perm.CanAccess(accessMode, unit.TypeCode)
+	// if it doesn't require sign-in and anonymous user has access, return true
+	// if the user is already signed in (for example: by session auth method), and the doer can access, return true
+	if canAccess && (!requireSigned || ctx.IsSigned) {
 		return true
 	}
 
+	// now, either sign-in is required or the ctx.Doer cannot access, check the LFS token
+	// however, "ctx.Doer exists but cannot access then check LFS token" should not really happen:
+	// * why a request can be sent with both valid user session and valid LFS token then use LFS token to access?
 	user, err := parseToken(ctx, authorization, repository, accessMode)
 	if err != nil {
 		// Most of these are Warn level - the true internal server errors are logged in parseToken already
@@ -552,9 +584,6 @@ func authenticate(ctx *context.Context, repository *repo_model.Repository, autho
 }
 
 func handleLFSToken(ctx stdCtx.Context, tokenSHA string, target *repo_model.Repository, mode perm_model.AccessMode) (*user_model.User, error) {
-	if !strings.Contains(tokenSHA, ".") {
-		return nil, nil
-	}
 	token, err := jwt.ParseWithClaims(tokenSHA, &Claims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -562,7 +591,7 @@ func handleLFSToken(ctx stdCtx.Context, tokenSHA string, target *repo_model.Repo
 		return setting.LFS.JWTSecretBytes, nil
 	})
 	if err != nil {
-		return nil, nil
+		return nil, errors.New("invalid token")
 	}
 
 	claims, claimsOk := token.Claims.(*Claims)
